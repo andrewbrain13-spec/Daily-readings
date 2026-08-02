@@ -434,6 +434,34 @@ def _xml_escape(text):
     return (text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
 
+def published_cover_name():
+    """Return the cover's filename, stamped with a hash of its contents.
+
+    Podcast platforms decide whether to re-download artwork by whether the URL
+    changed, not by whether the bytes at that URL changed. A fixed name like
+    cover.jpg can therefore sit behind a stale cached image for days. Naming
+    the published copy after its own content means any future edit produces a
+    genuinely new URL and the platform fetches it.
+    """
+    import hashlib, shutil, glob
+
+    source = os.path.join(PUBLISH_DIR, "cover.jpg")
+    if not os.path.exists(source):
+        return None
+    digest = hashlib.md5(open(source, "rb").read()).hexdigest()[:10]
+    name = "cover-{}.jpg".format(digest)
+    dest = os.path.join(PUBLISH_DIR, name)
+    if not os.path.exists(dest):
+        shutil.copyfile(source, dest)
+        log("Published cover as {}".format(name))
+    # Drop superseded stamped copies so the folder does not accumulate them.
+    for old in glob.glob(os.path.join(PUBLISH_DIR, "cover-*.jpg")):
+        if os.path.basename(old) != name:
+            os.remove(old)
+            log("Removed superseded cover {}".format(os.path.basename(old)))
+    return name
+
+
 def rebuild_feed():
     """Regenerate feed.xml from whatever episodes are currently published.
 
@@ -517,7 +545,8 @@ def rebuild_feed():
         desc=_xml_escape(PODCAST_DESCRIPTION),
         author=_xml_escape(PODCAST_AUTHOR),
         owner=owner_block,
-        cover=_xml_escape("{}/cover.jpg".format(SITE_URL)),
+        cover=_xml_escape("{}/{}".format(SITE_URL,
+                                         published_cover_name() or "cover.jpg")),
         site=_xml_escape(SITE_URL),
         items="\n".join(items),
     )
