@@ -64,8 +64,22 @@ def log(msg):
 # Step 1: check for official Vatican News audio
 # ----------------------------------------------------------------------
 
+def item_url(item):
+    """Return the page URL for a feed item, from <link> or <guid>."""
+    return (item.findtext("link") or item.findtext("guid") or "").strip()
+
+
 def find_official_audio(today):
-    """Return an MP3 URL from the Vatican News feed for today, or None."""
+    """Return an MP3 URL from the Vatican News feed for today, or None.
+
+    Checked against the live feed on 2 Aug 2026: all 15 items carried only
+    title, guid, pubDate and description. There was not a single <enclosure>
+    or media tag, and the string "mp3" did not appear anywhere in the file.
+    The feed is dressed up with itunes: tags but publishes no audio, so in
+    practice this returns None and the synthesis path is what runs each day.
+    It is kept as a cheap look-ahead in case Vatican News ever adds real
+    recordings, and it fails safe: any error just falls through to synthesis.
+    """
     stamp = "{y}/{m:02d}/{d:02d}".format(y=today.year, m=today.month, d=today.day)
     try:
         resp = requests.get(RSS_URL, headers=BROWSER_HEADERS, timeout=30)
@@ -76,14 +90,18 @@ def find_official_audio(today):
         return None
 
     for item in root.iter("item"):
-        link = (item.findtext("link") or "")
+        # This feed has no <link> element at all: the page URL lives in <guid>.
+        # Reading only <link> meant the date never matched, so this check could
+        # never have fired even once audio appeared. Read both, prefer whichever
+        # is present.
+        where = item_url(item)
         enclosure = item.find("enclosure")
         if enclosure is None:
             continue
         url = enclosure.get("url", "")
         if ".mp3" not in url.lower():
             continue
-        if stamp in link:
+        if stamp in where:
             log("Found official Vatican News audio for today.")
             return url
 
@@ -113,7 +131,7 @@ def report_feed(today):
     found_any_audio = False
     for i, item in enumerate(items[:5]):
         title = item.findtext("title") or "(no title)"
-        link = item.findtext("link") or ""
+        link = item_url(item)
         enclosure = item.find("enclosure")
         enc_url = enclosure.get("url", "") if enclosure is not None else ""
         enc_type = enclosure.get("type", "") if enclosure is not None else ""
@@ -186,6 +204,13 @@ def scrape(today):
         log("Page request failed ({}).".format(exc))
         return None, url
 
+    # The site serves "Content-Type: text/html" with no charset, so requests
+    # falls back to ISO-8859-1 while the page is really UTF-8. Left alone that
+    # turns every curly quote into mojibake like 'a<80><9c>', which the voice
+    # then tries to read aloud. Trust the sniffed encoding instead.
+    if not resp.encoding or "charset" not in (resp.headers.get("Content-Type") or "").lower():
+        resp.encoding = resp.apparent_encoding or "utf-8"
+
     soup = BeautifulSoup(resp.text, "html.parser")
     for tag in soup(["script", "style", "nav", "header", "footer", "noscript"]):
         tag.decompose()
@@ -234,29 +259,28 @@ async def synthesize(text, path):
 # ----------------------------------------------------------------------
 
 def todoist_upload(path):
-    """Upload the MP3 and return the file_attachment object Todoist expects."""
-    endpoints = [
-        "https://api.todoist.com/api/v1/uploads",
-        "https://api.todoist.com/sync/v9/uploads/add",
-    ]
-    last_error = None
-    for endpoint in endpoints:
-        try:
-            with open(path, "rb") as handle:
-                resp = requests.post(
-                    endpoint,
-                    headers={"Authorization": "Bearer {}".format(TOKEN)},
-                    files={"file": (os.path.basename(path), handle, "audio/mpeg")},
-                    data={"file_name": os.path.basename(path)},
-                    timeout=180,
-                )
-            if resp.status_code < 300:
-                log("Uploaded via {}".format(endpoint))
-                return resp.json()
-            last_error = "{} -> {} {}".format(endpoint, resp.status_code, resp.text[:200])
-        except Exception as exc:
-            last_error = "{} -> {}".format(endpoint, exc)
-    raise RuntimeError("Todoist upload failed. {}".format(last_error))
+    """Upload the MP3 and return the file_attachment object Todoist expects.
+
+    Only the unified v1 endpoint is used. The old sync/v9 path was checked and
+    is permanently retired: it now answers 410 Gone with a notice telling you
+    to move to /api/v1/. Keeping it as a fallback would only ever waste a
+    request and hide the real error, so it was removed.
+    """
+    endpoint = "https://api.todoist.com/api/v1/uploads"
+    with open(path, "rb") as handle:
+        resp = requests.post(
+            endpoint,
+            headers={"Authorization": "Bearer {}".format(TOKEN)},
+            files={"file": (os.path.basename(path), handle, "audio/mpeg")},
+            data={"file_name": os.path.basename(path)},
+            timeout=180,
+        )
+    if resp.status_code >= 300:
+        raise RuntimeError(
+            "Todoist upload failed: {} {}".format(resp.status_code, resp.text[:300])
+        )
+    log("Uploaded to Todoist.")
+    return resp.json()
 
 
 def todoist_deliver(attachment, title, description, duration_seconds):
@@ -364,5 +388,37 @@ def main():
     return 0
 
 
+def _friendly_error(exc):
+    """Turn a Python exception into a sentence a non-programmer can act on."""
+    text = "{}: {}".format(type(exc).__name__, exc)
+    low = text.lower()
+    if "certificate" in low or "ssl" in low:
+        return ("Could not make a secure connection to the voice service. "
+                "If this happened on GitHub Actions, just re-run the job.")
+    if "speech.platform.bing.com" in low or "websocket" in low:
+        return ("The Microsoft voice service could not be reached. This is "
+                "usually temporary, so re-running the job normally fixes it.")
+    if "401" in low or "invalid token" in low or "auth" in low:
+        return ("Todoist rejected the token. Check that the TODOIST_TOKEN "
+                "secret in the repository matches the token in Todoist "
+                "Settings, Integrations, Developer.")
+    if "413" in low or "too large" in low:
+        return ("Todoist refused the file for being too large. Shortening the "
+                "reading or upgrading the Todoist plan would fix it.")
+    return "Something went wrong. The technical detail is: {}".format(text)
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        sys.exit(130)
+    except Exception as error:  # keep cron logs readable for a non-programmer
+        log("")
+        log("The run did not finish.")
+        log(_friendly_error(error))
+        log("")
+        log("Full technical detail follows, for troubleshooting:")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)

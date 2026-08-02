@@ -113,6 +113,24 @@ down, which suits scripture reasonably well.
 
 ---
 
+## What was verified on 2 August 2026
+
+Three things were checked against the live services, so they are settled:
+
+**The RSS feed has no audio.** All 15 items in the English feed carry only a
+title, a date, and the text. There is not a single audio attachment, and the
+word "mp3" does not appear anywhere in it. The feed is decorated with podcast
+tags but publishes no recordings. So in practice the script synthesizes the
+audio every day. The feed check is kept because it costs one quick request and
+would pick up real recordings automatically if Vatican News ever adds them.
+
+**The Todoist v9 API is dead.** The old `sync/v9` addresses now answer "410
+Gone" with a notice telling you to move to `/api/v1/`. The v1 addresses are
+live. The script now uses v1 only, and the dead fallback was removed.
+
+**The page reads correctly.** Today's page was fetched and all three sections
+came out complete and correctly punctuated.
+
 ## How it works
 
 1. Checks the official Vatican News audio feed first. If they published a real
