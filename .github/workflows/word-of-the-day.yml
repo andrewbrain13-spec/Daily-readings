@@ -23,6 +23,10 @@ on:
 jobs:
   word-of-the-day:
     runs-on: ubuntu-latest
+    # Needed so the job can commit each day's episode back into the repository,
+    # which is what GitHub Pages then serves to podcast apps.
+    permissions:
+      contents: write
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
@@ -39,16 +43,45 @@ jobs:
         env:
           TODOIST_TOKEN: ${{ secrets.TODOIST_TOKEN }}
           TODOIST_PROJECT_ID: ${{ secrets.TODOIST_PROJECT_ID }}
-          # Optional overrides. Change the voice or speed here if you like.
-          # SPEECH_RATE is how much faster or slower than the voice's normal
-          # pace to read. "+25%" is noticeably brisker; "+10%" is a gentle
-          # nudge; "-10%" slows it down. Keep the quotes and the percent sign.
+          # Natural pace. Podcast apps have their own speed control, so the
+          # listener chooses rather than having it baked into the file.
           VOICE: en-US-GuyNeural
-          SPEECH_RATE: "+15%"
+          SPEECH_RATE: "+0%"
           LOCAL_TZ: America/Chicago
+          # Where the published episodes and feed will live. Setting this is
+          # what switches on podcast mode.
+          SITE_URL: https://andrewbrain13-spec.github.io/Daily-readings
+          # Once the show is live on Spotify, put its URL in a repository
+          # secret named SHOW_LINK and the task will link straight there.
+          SHOW_LINK: ${{ secrets.SHOW_LINK }}
         run: |
           case "${{ inputs.mode }}" in
             check-feed) python word_of_the_day.py --check-feed ;;
             rate-test)  python word_of_the_day.py --rate-test ;;
             *)          python word_of_the_day.py ;;
           esac
+
+      - name: Publish the episode and feed
+        # Only on a real run. The diagnostic modes write nothing to publish.
+        if: inputs.mode == '' || inputs.mode == 'normal'
+        run: |
+          if [ -z "$(git status --porcelain docs)" ]; then
+            echo "Nothing new to publish."
+            exit 0
+          fi
+          git config user.name "word-of-the-day bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs
+          git commit -m "Publish episode for $(date -u +%Y-%m-%d)"
+          # The scheduled job and a hand-started one can overlap, so rebase on
+          # whatever landed first rather than failing the run.
+          for attempt in 1 2 3; do
+            if git push; then
+              echo "Published."
+              exit 0
+            fi
+            echo "Push rejected, rebasing and retrying ($attempt of 3)."
+            git pull --rebase --autostash || true
+          done
+          echo "Could not publish after 3 attempts." >&2
+          exit 1

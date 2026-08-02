@@ -1,3 +1,10 @@
 __pycache__/
 *.pyc
-*.mp3
+
+# Ignore only the scratch audio at the repo root. The published episodes under
+# docs/audio/ must be committed, since that folder is what the podcast feed
+# serves. A blanket *.mp3 rule would silently drop every episode and leave the
+# feed pointing at files that were never uploaded.
+/word_of_the_day.mp3
+/ratetest-*.mp3
+/*.mp3.attempt*
