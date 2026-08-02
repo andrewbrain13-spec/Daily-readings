@@ -11,10 +11,14 @@ on:
   # the RSS feed (no task is created) instead of doing the full run.
   workflow_dispatch:
     inputs:
-      check_feed:
-        description: "Check the RSS feed only, do not create a task"
-        type: boolean
-        default: false
+      mode:
+        description: "What to do"
+        type: choice
+        default: normal
+        options:
+          - normal        # make the audio and create the Todoist task
+          - check-feed    # only look at the RSS feed, create nothing
+          - rate-test     # compare reading speeds, create nothing
 
 jobs:
   word-of-the-day:
@@ -43,8 +47,8 @@ jobs:
           SPEECH_RATE: "+25%"
           LOCAL_TZ: America/Chicago
         run: |
-          if [ "${{ inputs.check_feed }}" = "true" ]; then
-            python word_of_the_day.py --check-feed
-          else
-            python word_of_the_day.py
-          fi
+          case "${{ inputs.mode }}" in
+            check-feed) python word_of_the_day.py --check-feed ;;
+            rate-test)  python word_of_the_day.py --rate-test ;;
+            *)          python word_of_the_day.py ;;
+          esac

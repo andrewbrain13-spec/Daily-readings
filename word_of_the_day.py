@@ -258,6 +258,55 @@ async def synthesize(text, path):
 # Step 3: deliver to Todoist
 # ----------------------------------------------------------------------
 
+def rate_test(today):
+    """Diagnostic: read the same text at several speeds and report each length.
+
+    Answers two questions at once. First, whether a "+" rate really does speed
+    the reading up. Second, whether synthesis is reliable, because if the same
+    text and rate give different lengths on repeat runs then the audio is being
+    silently cut short somewhere. Creates nothing in Todoist.
+    """
+    parts, _ = scrape(today)
+    if not parts:
+        log("Could not fetch today's readings, so there is nothing to test.")
+        return 1
+    text = build_script(parts, today)
+    log("Test text is {} characters.".format(len(text)))
+    log("")
+
+    trials = ["+0%", "+0%", "+25%", "+25%", "+50%"]
+    results = []
+    for i, rate in enumerate(trials):
+        path = "ratetest-{}.mp3".format(i)
+        try:
+            asyncio.run(edge_tts.Communicate(text, VOICE, rate=rate).save(path))
+            size = os.path.getsize(path)
+            seconds = MP3(path).info.length
+            results.append((rate, seconds, size))
+            log("  rate {:>5}  ->  {:6.1f} sec   {:.2f} MB".format(
+                rate, seconds, size / 1_000_000))
+        except Exception as exc:
+            log("  rate {:>5}  ->  FAILED: {}".format(rate, exc))
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
+
+    log("")
+    same = [r for r in results if r[0] == "+0%"]
+    if len(same) == 2:
+        a, b = same[0][1], same[1][1]
+        spread = abs(a - b)
+        if spread > 3:
+            log("WARNING: the same text at the same speed gave {:.0f} sec and "
+                "{:.0f} sec. That {:.0f} second gap means the audio is being "
+                "cut short at random, which is a reliability bug.".format(
+                    a, b, spread))
+        else:
+            log("Repeat runs at the same speed agree within {:.1f} sec, so "
+                "synthesis is reliable.".format(spread))
+    return 0
+
+
 def todoist_upload(path):
     """Upload the MP3 and return the file_attachment object Todoist expects.
 
@@ -337,10 +386,13 @@ def todoist_deliver(attachment, title, description, duration_seconds):
 def main():
     today = datetime.datetime.now(ZoneInfo(LOCAL_TZ)).date()
 
-    # Diagnostic mode: only inspect the feed, no token or task needed.
+    # Diagnostic modes: no token needed and nothing is created in Todoist.
     if "--check-feed" in sys.argv:
         log("Running feed check for {}".format(today.isoformat()))
         return report_feed(today)
+    if "--rate-test" in sys.argv:
+        log("Running speed test for {}".format(today.isoformat()))
+        return rate_test(today)
 
     if not TOKEN:
         log("TODOIST_TOKEN is not set. Stopping.")
