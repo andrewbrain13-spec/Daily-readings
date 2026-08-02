@@ -1,3 +1,4 @@
+# Runs daily and can also be started by hand from the Actions tab.
 name: Word of the Day
 
 on:
