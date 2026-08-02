@@ -498,6 +498,12 @@ def rebuild_feed():
     <language>en</language>
     <itunes:author>{author}</itunes:author>
 {owner}    <itunes:summary>{desc}</itunes:summary>
+    <itunes:image href="{cover}" />
+    <image>
+      <url>{cover}</url>
+      <title>{title}</title>
+      <link>{site}/</link>
+    </image>
     <itunes:category text="Religion &amp; Spirituality" />
     <itunes:explicit>no</itunes:explicit>
     <itunes:type>episodic</itunes:type>
@@ -509,6 +515,7 @@ def rebuild_feed():
         desc=_xml_escape(PODCAST_DESCRIPTION),
         author=_xml_escape(PODCAST_AUTHOR),
         owner=owner_block,
+        cover=_xml_escape("{}/cover.jpg".format(SITE_URL)),
         site=_xml_escape(SITE_URL),
         items="\n".join(items),
     )
