@@ -528,6 +528,82 @@ def rebuild_feed():
     return feed_path
 
 
+# Candidates worth hearing. The first four are Microsoft's newer generation
+# and sound markedly more natural than the older ones; Guy is included as the
+# current voice so there is a fair comparison.
+SAMPLE_VOICES = [
+    ("en-US-AndrewNeural", "US male, warm and confident"),
+    ("en-US-BrianNeural", "US male, approachable and sincere"),
+    ("en-GB-RyanNeural", "British male"),
+    ("en-GB-ThomasNeural", "British male, measured"),
+    ("en-IE-ConnorNeural", "Irish male"),
+    ("en-US-ChristopherNeural", "US male, authoritative"),
+    ("en-US-AvaNeural", "US female, expressive and warm"),
+    ("en-US-EmmaNeural", "US female, clear and conversational"),
+    ("en-US-GuyNeural", "the current voice, for comparison"),
+]
+
+
+def voice_test(today):
+    """Read the same short passage in each candidate voice and publish them.
+
+    Descriptions of a voice are close to useless, so this writes real samples
+    to docs/voices/ with a page to play them from and lets the ear decide.
+    """
+    parts, _ = scrape(today)
+    if not parts:
+        log("Could not fetch today's readings, so there is nothing to read.")
+        return 1
+
+    # A short passage: enough to judge tone, short enough to render quickly.
+    gospel = parts.get("gospel") or parts.get("reading") or ""
+    sample = "\n".join(gospel.split("\n")[:8]) or parts["reading"][:400]
+    sample = "Gospel of the day.\n\n" + sample
+    log("Sample is {} characters.\n".format(len(sample)))
+
+    out_dir = os.path.join(PUBLISH_DIR, "voices")
+    os.makedirs(out_dir, exist_ok=True)
+    rows = []
+    for short_name, blurb in SAMPLE_VOICES:
+        path = os.path.join(out_dir, short_name + ".mp3")
+        try:
+            asyncio.run(edge_tts.Communicate(sample, short_name,
+                                             rate=SPEECH_RATE).save(path))
+            seconds = MP3(path).info.length
+            log("  {:26s} {:5.1f} sec  {}".format(short_name, seconds, blurb))
+            rows.append((short_name, blurb))
+        except Exception as exc:
+            log("  {:26s} FAILED: {}".format(short_name, exc))
+
+    listen = "\n".join(
+        '      <li><strong>{n}</strong> <span>{b}</span><br>'
+        '<audio controls preload="none" src="{n}.mp3"></audio></li>'.format(
+            n=n, b=b) for n, b in rows)
+    html = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voice samples</title>
+<style>
+ body{{font-family:system-ui,sans-serif;max-width:40rem;margin:2.5rem auto;
+      padding:0 1.25rem;line-height:1.5;color:#222}}
+ li{{margin:0 0 1.4rem}} span{{color:#666;font-size:.9rem}}
+ audio{{width:100%;margin-top:.4rem}} ul{{list-style:none;padding:0}}
+ @media(prefers-color-scheme:dark){{body{{background:#111;color:#eee}}
+   span{{color:#aaa}}}}
+</style></head><body>
+<h1>Voice samples</h1>
+<p>The same passage from today's Gospel, read by each candidate voice.</p>
+<ul>
+{listen}
+</ul>
+</body></html>
+""".format(listen=listen)
+    with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as fh:
+        fh.write(html)
+    log("\nSamples published. Listen at {}/voices/".format(SITE_URL))
+    return 0
+
+
 def todoist_upload(path):
     """Upload the MP3 and return the file_attachment object Todoist expects.
 
@@ -647,6 +723,9 @@ def main():
     if "--rate-test" in sys.argv:
         log("Running speed test for {}".format(today.isoformat()))
         return rate_test(today)
+    if "--voice-test" in sys.argv:
+        log("Rendering voice samples for {}".format(today.isoformat()))
+        return voice_test(today)
 
     if not TOKEN:
         log("TODOIST_TOKEN is not set. Stopping.")

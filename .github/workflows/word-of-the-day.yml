@@ -19,6 +19,7 @@ on:
           - normal        # make the audio and create the Todoist task
           - check-feed    # only look at the RSS feed, create nothing
           - rate-test     # compare reading speeds, create nothing
+          - voice-test    # render samples of each voice, create nothing
 
 jobs:
   word-of-the-day:
@@ -68,12 +69,13 @@ jobs:
           case "${{ inputs.mode }}" in
             check-feed) python word_of_the_day.py --check-feed ;;
             rate-test)  python word_of_the_day.py --rate-test ;;
+            voice-test) python word_of_the_day.py --voice-test ;;
             *)          python word_of_the_day.py ;;
           esac
 
       - name: Publish the episode and feed
         # Only on a real run. The diagnostic modes write nothing to publish.
-        if: inputs.mode == '' || inputs.mode == 'normal'
+        if: inputs.mode == '' || inputs.mode == 'normal' || inputs.mode == 'voice-test'
         run: |
           if [ -z "$(git status --porcelain docs)" ]; then
             echo "Nothing new to publish."
