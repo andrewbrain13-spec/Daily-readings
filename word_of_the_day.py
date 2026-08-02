@@ -248,10 +248,69 @@ def build_script(parts, today):
     return "\n\n".join(chunks)
 
 
+def rate_multiplier(rate_text):
+    """Turn a rate like "+25%" into the factor it speeds speech up by (1.25)."""
+    try:
+        percent = int(rate_text.strip().rstrip("%"))
+    except (ValueError, AttributeError):
+        return 1.0
+    return max(0.1, 1.0 + percent / 100.0)
+
+
+def expected_seconds(text, rate_text):
+    """A conservative floor for how long the finished audio should run.
+
+    Measured against the real service, the voice reads about 13.7 characters
+    per second at normal speed. Using 15 here deliberately underestimates the
+    duration, so this is a floor that complete audio should always clear.
+    """
+    return (len(text) / 15.0) / rate_multiplier(rate_text)
+
+
 async def synthesize(text, path):
-    log("Synthesizing audio with {} at rate {}.".format(VOICE, SPEECH_RATE))
-    speaker = edge_tts.Communicate(text, VOICE, rate=SPEECH_RATE)
-    await speaker.save(path)
+    """Read the text aloud to an MP3, retrying if the audio comes back short.
+
+    edge-tts streams the audio over a long-lived connection. If that
+    connection drops part way through, it writes the partial audio and returns
+    without raising, so a run looks successful while the reading actually stops
+    mid sentence. That really happened: a reading whose full length is 244
+    seconds was delivered at 149 seconds with no error anywhere in the log.
+
+    So every attempt is measured against a conservative floor, and anything
+    obviously short is thrown away and re-read.
+    """
+    floor = expected_seconds(text, SPEECH_RATE) * 0.75
+    attempts = 3
+    best_path, best_length = None, -1.0
+
+    for attempt in range(1, attempts + 1):
+        log("Synthesizing audio with {} at rate {} (attempt {} of {}).".format(
+            VOICE, SPEECH_RATE, attempt, attempts))
+        candidate = "{}.attempt{}".format(path, attempt)
+        await edge_tts.Communicate(text, VOICE, rate=SPEECH_RATE).save(candidate)
+        try:
+            length = MP3(candidate).info.length
+        except Exception:
+            length = 0.0
+
+        if length > best_length:
+            if best_path and os.path.exists(best_path):
+                os.remove(best_path)
+            best_path, best_length = candidate, length
+        elif os.path.exists(candidate):
+            os.remove(candidate)
+
+        if length >= floor:
+            log("Audio is {:.0f} seconds, which is a sensible full length.".format(
+                length))
+            break
+        log("Audio came back at only {:.0f} seconds when at least {:.0f} was "
+            "expected, so it was cut short. Trying again.".format(length, floor))
+    else:
+        log("WARNING: every attempt came back short. Using the longest one "
+            "({:.0f} seconds). The reading may be incomplete.".format(best_length))
+
+    os.replace(best_path, path)
 
 
 # ----------------------------------------------------------------------
