@@ -52,6 +52,25 @@ BROWSER_HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
+DUE_STRING = os.environ.get("DUE_STRING", "today at 7am").strip()
+
+# Podcast publishing. When SITE_URL is set the script also writes the day's
+# audio and a rebuilt feed into PUBLISH_DIR, which a public GitHub Pages site
+# serves, and the Todoist task links to the show instead of carrying the file.
+SITE_URL = os.environ.get("SITE_URL", "").strip().rstrip("/")
+SHOW_LINK = os.environ.get("SHOW_LINK", "").strip()
+PUBLISH_DIR = os.environ.get("PUBLISH_DIR", "docs").strip()
+AUDIO_DIR_NAME = "audio"
+KEEP_EPISODES = int(os.environ.get("KEEP_EPISODES", "60"))
+
+PODCAST_TITLE = os.environ.get("PODCAST_TITLE", "Word of the Day").strip()
+PODCAST_DESCRIPTION = os.environ.get(
+    "PODCAST_DESCRIPTION",
+    "The Vatican News Word of the Day: the reading, the Gospel, and the words "
+    "of the Popes, read aloud each morning.",
+).strip()
+PODCAST_AUTHOR = os.environ.get("PODCAST_AUTHOR", "Vatican News (unofficial)").strip()
+
 OUT_FILE = "word_of_the_day.mp3"
 MAX_UPLOAD_BYTES = 4_800_000  # Todoist free plan caps uploads at 5 MB
 
@@ -366,6 +385,126 @@ def rate_test(today):
     return 0
 
 
+# ----------------------------------------------------------------------
+# Podcast publishing
+# ----------------------------------------------------------------------
+
+def audio_dir():
+    return os.path.join(PUBLISH_DIR, AUDIO_DIR_NAME)
+
+
+def publish_episode(mp3_path, today):
+    """Copy the day's audio into the published folder. Returns its filename."""
+    import shutil
+
+    os.makedirs(audio_dir(), exist_ok=True)
+    name = "{}.mp3".format(today.isoformat())
+    dest = os.path.join(audio_dir(), name)
+    shutil.copyfile(mp3_path, dest)
+    log("Published audio as {}".format(dest))
+    return name
+
+
+def prune_episodes():
+    """Keep only the most recent KEEP_EPISODES files so the repo stays small."""
+    if not os.path.isdir(audio_dir()):
+        return
+    files = sorted(f for f in os.listdir(audio_dir()) if f.endswith(".mp3"))
+    for stale in files[:-KEEP_EPISODES] if len(files) > KEEP_EPISODES else []:
+        os.remove(os.path.join(audio_dir(), stale))
+        log("Removed old episode {}".format(stale))
+
+
+def _rfc2822(day):
+    """Format a date the way RSS wants it, without relying on the locale."""
+    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    return "{}, {:02d} {} {} 07:00:00 +0000".format(
+        days[day.weekday()], day.day, months[day.month - 1], day.year)
+
+
+def _xml_escape(text):
+    return (text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+
+
+def rebuild_feed():
+    """Regenerate feed.xml from whatever episodes are currently published.
+
+    The folder of MP3 files is the only source of truth, so the feed can always
+    be rebuilt from scratch and never drifts out of step with the audio.
+    """
+    files = sorted(
+        (f for f in os.listdir(audio_dir()) if f.endswith(".mp3")), reverse=True
+    )
+    items = []
+    for name in files:
+        stamp = name[:-4]
+        try:
+            day = datetime.date.fromisoformat(stamp)
+        except ValueError:
+            continue
+        path = os.path.join(audio_dir(), name)
+        size = os.path.getsize(path)
+        try:
+            seconds = int(MP3(path).info.length)
+        except Exception:
+            seconds = 0
+        url = "{}/{}/{}".format(SITE_URL, AUDIO_DIR_NAME, name)
+        page = PAGE_TEMPLATE.format(y=day.year, m=day.month, d=day.day)
+        items.append("""    <item>
+      <title>{title}</title>
+      <description>{desc}</description>
+      <link>{page}</link>
+      <guid isPermaLink="false">{stamp}</guid>
+      <pubDate>{pub}</pubDate>
+      <enclosure url="{url}" length="{size}" type="audio/mpeg" />
+      <itunes:duration>{secs}</itunes:duration>
+      <itunes:explicit>no</itunes:explicit>
+    </item>""".format(
+            title=_xml_escape("Word of the Day - {}".format(
+                day.strftime("%d %B %Y"))),
+            desc=_xml_escape("The reading, the Gospel, and the words of the "
+                             "Popes for {}.".format(day.strftime("%d %B %Y"))),
+            page=_xml_escape(page),
+            stamp=stamp,
+            pub=_rfc2822(day),
+            url=_xml_escape(url),
+            size=size,
+            secs=seconds,
+        ))
+
+    feed = """<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+  <channel>
+    <title>{title}</title>
+    <description>{desc}</description>
+    <link>{site}/</link>
+    <language>en</language>
+    <itunes:author>{author}</itunes:author>
+    <itunes:summary>{desc}</itunes:summary>
+    <itunes:category text="Religion &amp; Spirituality" />
+    <itunes:explicit>no</itunes:explicit>
+    <itunes:type>episodic</itunes:type>
+{items}
+  </channel>
+</rss>
+""".format(
+        title=_xml_escape(PODCAST_TITLE),
+        desc=_xml_escape(PODCAST_DESCRIPTION),
+        author=_xml_escape(PODCAST_AUTHOR),
+        site=_xml_escape(SITE_URL),
+        items="\n".join(items),
+    )
+
+    os.makedirs(PUBLISH_DIR, exist_ok=True)
+    feed_path = os.path.join(PUBLISH_DIR, "feed.xml")
+    with open(feed_path, "w", encoding="utf-8") as handle:
+        handle.write(feed)
+    log("Rebuilt {} with {} episode(s).".format(feed_path, len(items)))
+    return feed_path
+
+
 def todoist_upload(path):
     """Upload the MP3 and return the file_attachment object Todoist expects.
 
@@ -391,6 +530,37 @@ def todoist_upload(path):
     return resp.json()
 
 
+def todoist_deliver_link(title, description, listen_url):
+    """Create the task with a comment that is just a tappable listen link."""
+    temp_id = str(uuid.uuid4())
+    task_args = {"content": title, "due": {"string": DUE_STRING}}
+    if description:
+        task_args["description"] = description[:15000]
+    if PROJECT_ID:
+        task_args["project_id"] = PROJECT_ID
+
+    commands = [
+        {"type": "item_add", "temp_id": temp_id, "uuid": str(uuid.uuid4()),
+         "args": task_args},
+        {"type": "note_add", "temp_id": str(uuid.uuid4()), "uuid": str(uuid.uuid4()),
+         "args": {"item_id": temp_id,
+                  "content": "Listen: {}".format(listen_url)}},
+    ]
+
+    resp = requests.post(
+        "https://api.todoist.com/api/v1/sync",
+        headers={"Authorization": "Bearer {}".format(TOKEN)},
+        data={"commands": json.dumps(commands)},
+        timeout=60,
+    )
+    resp.raise_for_status()
+    failures = {k: v for k, v in resp.json().get("sync_status", {}).items()
+                if v != "ok"}
+    if failures:
+        raise RuntimeError("Todoist rejected a command: {}".format(failures))
+    log("Task created with a link to {}".format(listen_url))
+
+
 def todoist_deliver(attachment, title, description, duration_seconds):
     """Create today's task and attach the audio as a comment, in one call."""
     attachment = dict(attachment)
@@ -398,7 +568,9 @@ def todoist_deliver(attachment, title, description, duration_seconds):
     attachment.setdefault("resource_type", "file")
 
     temp_id = str(uuid.uuid4())
-    task_args = {"content": title, "due": {"string": "today"}}
+    # "today at 7am" rather than plain "today" so the task carries a time and
+    # Todoist raises a phone notification instead of sitting silently in a list.
+    task_args = {"content": title, "due": {"string": DUE_STRING}}
     if description:
         task_args["description"] = description[:15000]
     if PROJECT_ID:
@@ -494,8 +666,18 @@ def main():
     description_bits.append(page_url)
     description = "\n\n".join(description_bits)
 
-    attachment = todoist_upload(OUT_FILE)
-    todoist_deliver(attachment, title, description, duration)
+    if SITE_URL:
+        # Podcast mode: publish the audio, rebuild the feed, and give Todoist a
+        # link to tap rather than a file. SHOW_LINK points at Spotify once the
+        # show exists there; until then the episode file itself is the target.
+        name = publish_episode(OUT_FILE, today)
+        prune_episodes()
+        rebuild_feed()
+        listen_url = SHOW_LINK or "{}/{}/{}".format(SITE_URL, AUDIO_DIR_NAME, name)
+        todoist_deliver_link(title, description, listen_url)
+    else:
+        attachment = todoist_upload(OUT_FILE)
+        todoist_deliver(attachment, title, description, duration)
     return 0
 
 
