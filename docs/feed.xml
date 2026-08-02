@@ -11,9 +11,9 @@
       <itunes:email>Andrew.brain13@gmail.com</itunes:email>
     </itunes:owner>
     <itunes:summary>The Vatican News Word of the Day: the reading, the Gospel, and the words of the Popes, read aloud each morning.</itunes:summary>
-    <itunes:image href="https://andrewbrain13-spec.github.io/Daily-readings/cover.jpg" />
+    <itunes:image href="https://andrewbrain13-spec.github.io/Daily-readings/cover-1a01af56a5.jpg" />
     <image>
-      <url>https://andrewbrain13-spec.github.io/Daily-readings/cover.jpg</url>
+      <url>https://andrewbrain13-spec.github.io/Daily-readings/cover-1a01af56a5.jpg</url>
       <title>Daily Readings and Words from the Pope</title>
       <link>https://andrewbrain13-spec.github.io/Daily-readings/</link>
     </image>
@@ -26,8 +26,8 @@
       <link>https://www.vaticannews.va/en/word-of-the-day/2026/08/02.html</link>
       <guid isPermaLink="false">2026-08-02</guid>
       <pubDate>Sun, 02 Aug 2026 07:00:00 +0000</pubDate>
-      <enclosure url="https://andrewbrain13-spec.github.io/Daily-readings/audio/2026-08-02.mp3" length="1185840" type="audio/mpeg" />
-      <itunes:duration>197</itunes:duration>
+      <enclosure url="https://andrewbrain13-spec.github.io/Daily-readings/audio/2026-08-02.mp3" length="1295136" type="audio/mpeg" />
+      <itunes:duration>215</itunes:duration>
       <itunes:explicit>no</itunes:explicit>
     </item>
   </channel>
