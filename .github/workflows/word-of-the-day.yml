@@ -44,7 +44,7 @@ jobs:
           # pace to read. "+25%" is noticeably brisker; "+10%" is a gentle
           # nudge; "-10%" slows it down. Keep the quotes and the percent sign.
           VOICE: en-US-GuyNeural
-          SPEECH_RATE: "+25%"
+          SPEECH_RATE: "+15%"
           LOCAL_TZ: America/Chicago
         run: |
           case "${{ inputs.mode }}" in
