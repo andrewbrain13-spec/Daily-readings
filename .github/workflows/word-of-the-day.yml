@@ -30,6 +30,12 @@ jobs:
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
+        with:
+          # Always work from main, whatever branch triggered this. Scheduled
+          # runs otherwise use the repository's default branch, so if that ever
+          # points somewhere stale the morning job would quietly run old code
+          # and publish to a branch GitHub Pages does not serve.
+          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -80,12 +86,12 @@ jobs:
           # The scheduled job and a hand-started one can overlap, so rebase on
           # whatever landed first rather than failing the run.
           for attempt in 1 2 3; do
-            if git push; then
-              echo "Published."
+            if git push origin HEAD:main; then
+              echo "Published to main."
               exit 0
             fi
             echo "Push rejected, rebasing and retrying ($attempt of 3)."
-            git pull --rebase --autostash || true
+            git fetch origin main && git rebase origin/main || true
           done
           echo "Could not publish after 3 attempts." >&2
           exit 1
