@@ -54,6 +54,9 @@ jobs:
           # Once the show is live on Spotify, put its URL in a repository
           # secret named SHOW_LINK and the task will link straight there.
           SHOW_LINK: ${{ secrets.SHOW_LINK }}
+          # Spotify sends its verification code here. Set this as a repository
+          # secret named PODCAST_EMAIL before submitting the feed.
+          PODCAST_EMAIL: ${{ secrets.PODCAST_EMAIL }}
         run: |
           case "${{ inputs.mode }}" in
             check-feed) python word_of_the_day.py --check-feed ;;

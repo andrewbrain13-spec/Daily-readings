@@ -70,6 +70,10 @@ PODCAST_DESCRIPTION = os.environ.get(
     "of the Popes, read aloud each morning.",
 ).strip()
 PODCAST_AUTHOR = os.environ.get("PODCAST_AUTHOR", "Vatican News (unofficial)").strip()
+# Spotify emails a verification code to this address before it will accept the
+# feed, so submission fails without it. It is visible to anyone who reads the
+# feed, so use an address you are happy to publish.
+PODCAST_EMAIL = os.environ.get("PODCAST_EMAIL", "").strip()
 
 OUT_FILE = "word_of_the_day.mp3"
 MAX_UPLOAD_BYTES = 4_800_000  # Todoist free plan caps uploads at 5 MB
@@ -474,6 +478,17 @@ def rebuild_feed():
             secs=seconds,
         ))
 
+    if PODCAST_EMAIL:
+        owner_block = ("    <itunes:owner>\n"
+                       "      <itunes:name>{}</itunes:name>\n"
+                       "      <itunes:email>{}</itunes:email>\n"
+                       "    </itunes:owner>\n").format(
+            _xml_escape(PODCAST_AUTHOR), _xml_escape(PODCAST_EMAIL))
+    else:
+        owner_block = ""
+        log("NOTE: PODCAST_EMAIL is not set. The feed is valid, but Spotify "
+            "will refuse it until an owner email is present.")
+
     feed = """<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
   <channel>
@@ -482,7 +497,7 @@ def rebuild_feed():
     <link>{site}/</link>
     <language>en</language>
     <itunes:author>{author}</itunes:author>
-    <itunes:summary>{desc}</itunes:summary>
+{owner}    <itunes:summary>{desc}</itunes:summary>
     <itunes:category text="Religion &amp; Spirituality" />
     <itunes:explicit>no</itunes:explicit>
     <itunes:type>episodic</itunes:type>
@@ -493,6 +508,7 @@ def rebuild_feed():
         title=_xml_escape(PODCAST_TITLE),
         desc=_xml_escape(PODCAST_DESCRIPTION),
         author=_xml_escape(PODCAST_AUTHOR),
+        owner=owner_block,
         site=_xml_escape(SITE_URL),
         items="\n".join(items),
     )
