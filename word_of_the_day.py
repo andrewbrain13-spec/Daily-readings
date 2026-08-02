@@ -70,6 +70,8 @@ PODCAST_DESCRIPTION = os.environ.get(
     "of the Popes, read aloud each morning.",
 ).strip()
 PODCAST_AUTHOR = os.environ.get("PODCAST_AUTHOR", "Vatican News (unofficial)").strip()
+# Prefix for each episode title, followed by the date.
+EPISODE_PREFIX = os.environ.get("EPISODE_PREFIX", "Daily Readings").strip()
 # Spotify emails a verification code to this address before it will accept the
 # feed, so submission fails without it. It is visible to anyone who reads the
 # feed, so use an address you are happy to publish.
@@ -466,8 +468,8 @@ def rebuild_feed():
       <itunes:duration>{secs}</itunes:duration>
       <itunes:explicit>no</itunes:explicit>
     </item>""".format(
-            title=_xml_escape("Word of the Day - {}".format(
-                day.strftime("%d %B %Y"))),
+            title=_xml_escape("{} - {}".format(
+                EPISODE_PREFIX, day.strftime("%d %B %Y"))),
             desc=_xml_escape("The reading, the Gospel, and the words of the "
                              "Popes for {}.".format(day.strftime("%d %B %Y"))),
             page=_xml_escape(page),

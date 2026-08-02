@@ -143,17 +143,17 @@ def add_text(img):
     d = ImageDraw.Draw(img)
     # Keep type well inside the border rather than running up against it.
     safe = SIZE * 0.74
-    title = fitted_font(d, "WORD OF THE DAY", SERIF_BOLD, safe, SIZE // 11)
-    sub = fitted_font(d, "D A I L Y   R E A D I N G S", SANS_BOLD,
-                      safe * 0.62, SIZE // 34)
+    title = fitted_font(d, "DAILY READINGS", SERIF_BOLD, safe, SIZE // 9)
+    sub = fitted_font(d, "A N D  W O R D S  F R O M  T H E  P O P E", SANS_BOLD,
+                      safe * 0.82, SIZE // 34)
 
     def centred(text, font, y, fill):
         box = d.textbbox((0, 0), text, font=font)
         d.text(((SIZE - (box[2] - box[0])) / 2 - box[0], y), text,
                font=font, fill=fill)
 
-    centred("WORD OF THE DAY", title, int(SIZE * 0.735), CREAM)
-    centred("D A I L Y   R E A D I N G S", sub, int(SIZE * 0.858), GOLD)
+    centred("DAILY READINGS", title, int(SIZE * 0.730), CREAM)
+    centred("A N D  W O R D S  F R O M  T H E  P O P E", sub, int(SIZE * 0.858), GOLD)
 
     # Thin rule between the two lines of type.
     y = int(SIZE * 0.836)
