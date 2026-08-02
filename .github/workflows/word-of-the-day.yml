@@ -68,6 +68,9 @@ jobs:
           # because the feed publishes it anyway; that is how podcast feeds
           # prove ownership. Change it here if the address ever changes.
           PODCAST_EMAIL: Andrew.brain13@gmail.com
+          # The show name Spotify displays. Spotify has no setting for this;
+          # it mirrors whatever the feed says, so this is where it changes.
+          PODCAST_TITLE: Daily Readings and words from the Pope
         run: |
           case "${{ inputs.mode }}" in
             check-feed) python word_of_the_day.py --check-feed ;;
