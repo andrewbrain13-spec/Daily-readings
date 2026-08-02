@@ -36,8 +36,11 @@ jobs:
           TODOIST_TOKEN: ${{ secrets.TODOIST_TOKEN }}
           TODOIST_PROJECT_ID: ${{ secrets.TODOIST_PROJECT_ID }}
           # Optional overrides. Change the voice or speed here if you like.
+          # SPEECH_RATE is how much faster or slower than the voice's normal
+          # pace to read. "+25%" is noticeably brisker; "+10%" is a gentle
+          # nudge; "-10%" slows it down. Keep the quotes and the percent sign.
           VOICE: en-US-GuyNeural
-          SPEECH_RATE: "+0%"
+          SPEECH_RATE: "+25%"
           LOCAL_TZ: America/Chicago
         run: |
           if [ "${{ inputs.check_feed }}" = "true" ]; then
