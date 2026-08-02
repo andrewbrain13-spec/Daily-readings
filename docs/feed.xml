@@ -6,6 +6,10 @@
     <link>https://andrewbrain13-spec.github.io/Daily-readings/</link>
     <language>en</language>
     <itunes:author>Vatican News (unofficial)</itunes:author>
+    <itunes:owner>
+      <itunes:name>Vatican News (unofficial)</itunes:name>
+      <itunes:email>Andrew.brain13@gmail.com</itunes:email>
+    </itunes:owner>
     <itunes:summary>The Vatican News Word of the Day: the reading, the Gospel, and the words of the Popes, read aloud each morning.</itunes:summary>
     <itunes:category text="Religion &amp; Spirituality" />
     <itunes:explicit>no</itunes:explicit>
