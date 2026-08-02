@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+  <channel>
+    <title>Word of the Day</title>
+    <description>The Vatican News Word of the Day: the reading, the Gospel, and the words of the Popes, read aloud each morning.</description>
+    <link>https://andrewbrain13-spec.github.io/Daily-readings/</link>
+    <language>en</language>
+    <itunes:author>Vatican News (unofficial)</itunes:author>
+    <itunes:summary>The Vatican News Word of the Day: the reading, the Gospel, and the words of the Popes, read aloud each morning.</itunes:summary>
+    <itunes:category text="Religion &amp; Spirituality" />
+    <itunes:explicit>no</itunes:explicit>
+    <itunes:type>episodic</itunes:type>
+    <item>
+      <title>Word of the Day - 02 August 2026</title>
+      <description>The reading, the Gospel, and the words of the Popes for 02 August 2026.</description>
+      <link>https://www.vaticannews.va/en/word-of-the-day/2026/08/02.html</link>
+      <guid isPermaLink="false">2026-08-02</guid>
+      <pubDate>Sun, 02 Aug 2026 07:00:00 +0000</pubDate>
+      <enclosure url="https://andrewbrain13-spec.github.io/Daily-readings/audio/2026-08-02.mp3" length="1462176" type="audio/mpeg" />
+      <itunes:duration>243</itunes:duration>
+      <itunes:explicit>no</itunes:explicit>
+    </item>
+  </channel>
+</rss>
