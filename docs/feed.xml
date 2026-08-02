@@ -11,6 +11,12 @@
       <itunes:email>Andrew.brain13@gmail.com</itunes:email>
     </itunes:owner>
     <itunes:summary>The Vatican News Word of the Day: the reading, the Gospel, and the words of the Popes, read aloud each morning.</itunes:summary>
+    <itunes:image href="https://andrewbrain13-spec.github.io/Daily-readings/cover.jpg" />
+    <image>
+      <url>https://andrewbrain13-spec.github.io/Daily-readings/cover.jpg</url>
+      <title>Word of the Day</title>
+      <link>https://andrewbrain13-spec.github.io/Daily-readings/</link>
+    </image>
     <itunes:category text="Religion &amp; Spirituality" />
     <itunes:explicit>no</itunes:explicit>
     <itunes:type>episodic</itunes:type>
