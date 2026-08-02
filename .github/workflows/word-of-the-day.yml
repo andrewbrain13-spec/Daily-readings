@@ -50,9 +50,12 @@ jobs:
         env:
           TODOIST_TOKEN: ${{ secrets.TODOIST_TOKEN }}
           TODOIST_PROJECT_ID: ${{ secrets.TODOIST_PROJECT_ID }}
+          # Newer-generation voice. Phrases the short poetic lines of
+          # lectionary text far more naturally than the older en-US-GuyNeural,
+          # which inserted a mechanical pause at every line break.
+          VOICE: en-US-AndrewNeural
           # Natural pace. Podcast apps have their own speed control, so the
           # listener chooses rather than having it baked into the file.
-          VOICE: en-US-GuyNeural
           SPEECH_RATE: "+0%"
           LOCAL_TZ: America/Chicago
           # Where the published episodes and feed will live. Setting this is
