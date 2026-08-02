@@ -51,9 +51,9 @@ jobs:
           # Where the published episodes and feed will live. Setting this is
           # what switches on podcast mode.
           SITE_URL: https://andrewbrain13-spec.github.io/Daily-readings
-          # Once the show is live on Spotify, put its URL in a repository
-          # secret named SHOW_LINK and the task will link straight there.
-          SHOW_LINK: ${{ secrets.SHOW_LINK }}
+          # The morning task links straight into the Spotify app. Not a secret;
+          # it is the public address of the show.
+          SHOW_LINK: https://open.spotify.com/show/0340g4OVEM6jTEcu4fsMBs
           # Spotify sends its verification code here. This is not kept secret
           # because the feed publishes it anyway; that is how podcast feeds
           # prove ownership. Change it here if the address ever changes.
