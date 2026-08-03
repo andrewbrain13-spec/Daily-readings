@@ -18,6 +18,7 @@ Environment variables:
 """
 
 import os
+import re
 import sys
 import json
 import uuid
@@ -259,17 +260,80 @@ def scrape(today):
     return {"reading": reading, "gospel": gospel, "pope": pope}, url
 
 
+# Parentheticals that are reference notes rather than prose. These are written
+# for someone reading the page and break the thread badly when read aloud, e.g.
+# "(En. in Ps. 95, 7: PL 36, 1233)" or "(Pope Benedict XVI, Angelus, 7 August
+# 2011)". They are stripped from the spoken script only; the task description
+# keeps them, since there they are useful.
+CITATION_HINTS = (
+    "cf.", "cf ", " pl ", "ibid", "op. cit", "angelus", "homily", "encyclical",
+    "general audience", "apostolic", "catechesis", "message", "letter",
+    "audience", "exhortation", "en. in ps",
+)
+
+
+def _is_citation(inner):
+    """True if the text inside a pair of brackets is a reference, not prose."""
+    text = inner.strip()
+    if not text:
+        return True
+    # An elision marker such as (...) or the single-character ellipsis.
+    if set(text) <= set(".\u2026 "):
+        return True
+    low = text.lower()
+    # A four-digit year is the strongest single signal of a citation.
+    if re.search(r"\b(1[0-9]{3}|20[0-9]{2})\b", text):
+        return True
+    if any(h in low for h in CITATION_HINTS):
+        return True
+    # Reference shorthand: mostly numbers and punctuation, e.g. "95, 7: 36, 1233"
+    # or "Mt 14:22-33". Prose almost never looks like this.
+    digits = sum(c.isdigit() for c in text)
+    letters = sum(c.isalpha() for c in text)
+    if digits and (digits >= letters or re.search(r"\d+\s*[:,-]\s*\d+", text)):
+        return True
+    return False
+
+
+def strip_citations(text):
+    """Remove reference-style parentheticals so the reading flows when spoken."""
+    def replace(match):
+        inner = match.group(1)
+        if not _is_citation(inner):
+            return match.group(0)
+        # An elision marker stands in for omitted text, so it is a sentence
+        # break. Dropping it outright would run two sentences together; leave a
+        # full stop unless the text already ends in punctuation.
+        if set(inner.strip()) <= set(".\u2026 ") and inner.strip():
+            before = match.string[:match.start()].rstrip()
+            if before and before[-1] not in ".!?,;:\u201d\u2019\"'":
+                return "."
+        return ""
+
+    cleaned = re.sub(r"\(([^()]*)\)", replace, text)
+    cleaned = re.sub(r"\[([^\[\]]*)\]", replace, cleaned)
+    # Tidy the spacing and stray punctuation the removal leaves behind.
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    cleaned = re.sub(r"\s+([.,;:!?])", r"\1", cleaned)
+    cleaned = re.sub(r"([.,;:])\s*\1+", r"\1", cleaned)
+    # Removing a citation can leave punctuation stranded either side of a
+    # closing quote, e.g. 'root of our being.".' Collapse those to one mark.
+    cleaned = re.sub(r"([.!?])([\u201d\u2019\"\'])\s*[.,;:]", r"\1\2", cleaned)
+    cleaned = re.sub(r"([\u201d\u2019\"\'])\s*\.\s*\.", r"\1.", cleaned)
+    return "\n".join(line.strip() for line in cleaned.split("\n")).strip()
+
+
 def build_script(parts, today):
     pretty = "{}, {} {}, {}".format(
         today.strftime("%A"), today.strftime("%B"), today.day, today.year
     )
     chunks = ["The Word of the Day for {}.".format(pretty)]
     if parts["reading"]:
-        chunks += ["Reading of the day.", parts["reading"]]
+        chunks += ["Reading of the day.", strip_citations(parts["reading"])]
     if parts["gospel"]:
-        chunks += ["Gospel of the day.", parts["gospel"]]
+        chunks += ["Gospel of the day.", strip_citations(parts["gospel"])]
     if parts["pope"]:
-        chunks += ["The words of the Popes.", parts["pope"]]
+        chunks += ["The words of the Popes.", strip_citations(parts["pope"])]
     return "\n\n".join(chunks)
 
 
