@@ -762,6 +762,16 @@ def main():
         log("TODOIST_TOKEN is not set. Stopping.")
         return 1
 
+    # There are two scheduled times a day, because GitHub drops scheduled runs
+    # often enough that a single slot means an occasional missed morning. The
+    # second run must therefore be a no-op once the day's episode exists, or it
+    # would file a duplicate task and republish the same audio.
+    if SITE_URL:
+        already = os.path.join(audio_dir(), "{}.mp3".format(today.isoformat()))
+        if os.path.exists(already):
+            log("Today's episode is already published. Nothing to do.")
+            return 0
+
     log("Running for {}".format(today.isoformat()))
 
     parts, page_url = scrape(today)

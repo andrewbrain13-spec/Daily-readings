@@ -3,10 +3,17 @@ name: Word of the Day
 
 on:
   schedule:
-    # 11:00 UTC daily. That is 6:00 AM US Central in summer (daylight saving)
-    # and 5:00 AM in winter. Edit the numbers below to change the time. The
-    # five fields are: minute hour day-of-month month day-of-week, all in UTC.
-    - cron: "0 11 * * *"
+    # 10:38 and 11:38 UTC. Deliberately NOT on the hour: GitHub's scheduler is
+    # heavily oversubscribed at :00 and documents that runs can be delayed or
+    # dropped entirely at peak times. The first attempt at "0 11 * * *" never
+    # fired at all. An odd minute sits in a much quieter queue.
+    #
+    # Two times, not one, because a dropped run means no reading that morning.
+    # 10:38 UTC is 5:38 AM US Central in summer; the 11:38 entry covers winter
+    # and doubles as a retry. The script does nothing on the second run if the
+    # day's episode already exists, so a duplicate is harmless.
+    - cron: "38 10 * * *"
+    - cron: "38 11 * * *"
   # Lets you run it by hand from the Actions tab. Tick the box to only inspect
   # the RSS feed (no task is created) instead of doing the full run.
   workflow_dispatch:
