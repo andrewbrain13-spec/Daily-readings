@@ -3,17 +3,22 @@ name: Word of the Day
 
 on:
   schedule:
-    # 10:38 and 11:38 UTC. Deliberately NOT on the hour: GitHub's scheduler is
-    # heavily oversubscribed at :00 and documents that runs can be delayed or
-    # dropped entirely at peak times. The first attempt at "0 11 * * *" never
-    # fired at all. An odd minute sits in a much quieter queue.
+    # Three attempts from 08:47 UTC, and deliberately not on the hour.
     #
-    # Two times, not one, because a dropped run means no reading that morning.
-    # 10:38 UTC is 5:38 AM US Central in summer; the 11:38 entry covers winter
-    # and doubles as a retry. The script does nothing on the second run if the
-    # day's episode already exists, so a duplicate is harmless.
-    - cron: "38 10 * * *"
-    - cron: "38 11 * * *"
+    # Two things had to be worked around here. First, "0 11 * * *" never fired
+    # at all: GitHub documents that scheduled runs are delayed or dropped under
+    # load, and the top of the hour is the worst slot on the platform. An odd
+    # minute fixed that. Second, even once they fire, GitHub ran them roughly
+    # 100 minutes late two days running, which pushed the reading past the 7am
+    # task and made it look like nothing had happened.
+    #
+    # So the first attempt is set early enough that even a two hour delay still
+    # lands well before 7am US Central. The later two are backups in case one is
+    # dropped. The script exits immediately when the day's episode already
+    # exists, so the extra attempts cost seconds and never duplicate anything.
+    - cron: "47 8 * * *"
+    - cron: "47 9 * * *"
+    - cron: "47 10 * * *"
   # Lets you run it by hand from the Actions tab. Tick the box to only inspect
   # the RSS feed (no task is created) instead of doing the full run.
   workflow_dispatch:
