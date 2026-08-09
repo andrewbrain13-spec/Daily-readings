@@ -63,6 +63,12 @@ SHOW_LINK = os.environ.get("SHOW_LINK", "").strip()
 PUBLISH_DIR = os.environ.get("PUBLISH_DIR", "docs").strip()
 AUDIO_DIR_NAME = "audio"
 KEEP_EPISODES = int(os.environ.get("KEEP_EPISODES", "60"))
+# How many days ahead to publish. Vatican News puts the readings up about a
+# week in advance, so there is nothing to wait for. Publishing tomorrow's
+# episode today gives Spotify a full day to notice it, which is the actual
+# reason a morning episode used to be missing: not that the job had failed,
+# but that Spotify had not polled the feed yet.
+LEAD_DAYS = int(os.environ.get("LEAD_DAYS", "2"))
 
 PODCAST_TITLE = os.environ.get("PODCAST_TITLE", "Word of the Day").strip()
 PODCAST_DESCRIPTION = os.environ.get(
@@ -323,6 +329,20 @@ def strip_citations(text):
     return "\n".join(line.strip() for line in cleaned.split("\n")).strip()
 
 
+def build_description(parts, page_url):
+    """The written text that goes in the task, citations and all."""
+    bits = []
+    if parts:
+        if parts.get("reading"):
+            bits.append("**Reading**\n\n" + parts["reading"])
+        if parts.get("gospel"):
+            bits.append("**Gospel**\n\n" + parts["gospel"])
+        if parts.get("pope"):
+            bits.append("**The words of the Popes**\n\n" + parts["pope"])
+    bits.append(page_url)
+    return "\n\n".join(bits)
+
+
 def build_script(parts, today):
     pretty = "{}, {} {}, {}".format(
         today.strftime("%A"), today.strftime("%B"), today.day, today.year
@@ -458,6 +478,30 @@ def rate_test(today):
 # ----------------------------------------------------------------------
 # Podcast publishing
 # ----------------------------------------------------------------------
+
+def task_marker(day):
+    """Path of the marker recording that a Todoist task was made for a day.
+
+    Episodes are now built ahead of time, so "does the episode exist" no longer
+    answers "has the task been created". The two need separate records.
+    """
+    return os.path.join(PUBLISH_DIR, ".tasks", "{}.txt".format(day.isoformat()))
+
+
+def build_episode(day):
+    """Make and publish one day's audio. Returns True if it was created."""
+    path = os.path.join(audio_dir(), "{}.mp3".format(day.isoformat()))
+    if os.path.exists(path):
+        return False
+    parts, _ = scrape(day)
+    if not parts:
+        log("No readings available for {} yet.".format(day.isoformat()))
+        return False
+    script = build_script(parts, day)
+    asyncio.run(synthesize(script, OUT_FILE))
+    publish_episode(OUT_FILE, day)
+    return True
+
 
 def audio_dir():
     return os.path.join(PUBLISH_DIR, AUDIO_DIR_NAME)
@@ -826,65 +870,64 @@ def main():
         log("TODOIST_TOKEN is not set. Stopping.")
         return 1
 
-    # There are two scheduled times a day, because GitHub drops scheduled runs
-    # often enough that a single slot means an occasional missed morning. The
-    # second run must therefore be a no-op once the day's episode exists, or it
-    # would file a duplicate task and republish the same audio.
     if SITE_URL:
-        already = os.path.join(audio_dir(), "{}.mp3".format(today.isoformat()))
-        if os.path.exists(already):
-            log("Today's episode is already published. Nothing to do.")
+        # Build today's episode and the next few days'. Vatican News publishes
+        # about a week ahead, so tomorrow's reading is already available now,
+        # and having it in the feed a day early gives Spotify time to poll.
+        made = []
+        for offset in range(0, max(1, LEAD_DAYS + 1)):
+            day = today + datetime.timedelta(days=offset)
+            try:
+                if build_episode(day):
+                    made.append(day.isoformat())
+            except Exception as exc:
+                log("Could not build {}: {}".format(day.isoformat(), exc))
+        if made:
+            log("Built episodes for: {}".format(", ".join(made)))
+        else:
+            log("All episodes in the window are already published.")
+        prune_episodes()
+        rebuild_feed()
+
+        # The task is tracked separately from the episode, because episodes are
+        # now built in advance and their presence no longer means the morning
+        # task has been filed.
+        marker = task_marker(today)
+        if os.path.exists(marker):
+            log("Today's task already exists. Nothing more to do.")
             return 0
 
+        parts, page_url = scrape(today)
+        description = build_description(parts, page_url)
+        title = "Word of the Day: {} {}".format(today.strftime("%b"), today.day)
+        name = "{}.mp3".format(today.isoformat())
+        listen_url = SHOW_LINK or "{}/{}/{}".format(SITE_URL, AUDIO_DIR_NAME, name)
+        todoist_deliver_link(title, description, listen_url)
+        os.makedirs(os.path.dirname(marker), exist_ok=True)
+        with open(marker, "w") as handle:
+            handle.write("task created\n")
+        return 0
+
+    # Without SITE_URL the original behaviour is unchanged: build today's audio
+    # and attach the file to the task directly.
     log("Running for {}".format(today.isoformat()))
-
     parts, page_url = scrape(today)
-
     official = find_official_audio(today)
     if official:
         download(official, OUT_FILE)
     else:
         if not parts:
-            return 0  # nothing published today, exit quietly
-        script = build_script(parts, today)
-        asyncio.run(synthesize(script, OUT_FILE))
-
-    size = os.path.getsize(OUT_FILE)
-    log("Audio file is {:.1f} MB".format(size / 1_000_000))
-    if size > MAX_UPLOAD_BYTES:
-        log("Warning: file may exceed the Todoist upload limit for your plan.")
+            return 0
+        asyncio.run(synthesize(build_script(parts, today), OUT_FILE))
 
     try:
         duration = MP3(OUT_FILE).info.length
     except Exception:
         duration = 0
-    log("Duration is about {:.0f} seconds.".format(duration))
-
     title = "Word of the Day: {} {}".format(today.strftime("%b"), today.day)
-
-    description_bits = []
-    if parts:
-        if parts["reading"]:
-            description_bits.append("**Reading**\n\n" + parts["reading"])
-        if parts["gospel"]:
-            description_bits.append("**Gospel**\n\n" + parts["gospel"])
-        if parts["pope"]:
-            description_bits.append("**The words of the Popes**\n\n" + parts["pope"])
-    description_bits.append(page_url)
-    description = "\n\n".join(description_bits)
-
-    if SITE_URL:
-        # Podcast mode: publish the audio, rebuild the feed, and give Todoist a
-        # link to tap rather than a file. SHOW_LINK points at Spotify once the
-        # show exists there; until then the episode file itself is the target.
-        name = publish_episode(OUT_FILE, today)
-        prune_episodes()
-        rebuild_feed()
-        listen_url = SHOW_LINK or "{}/{}/{}".format(SITE_URL, AUDIO_DIR_NAME, name)
-        todoist_deliver_link(title, description, listen_url)
-    else:
-        attachment = todoist_upload(OUT_FILE)
-        todoist_deliver(attachment, title, description, duration)
+    description = build_description(parts, page_url)
+    attachment = todoist_upload(OUT_FILE)
+    todoist_deliver(attachment, title, description, duration)
     return 0
 
 
