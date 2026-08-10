@@ -579,12 +579,20 @@ def rebuild_feed():
     files = sorted(
         (f for f in os.listdir(audio_dir()) if f.endswith(".mp3")), reverse=True
     )
+    # Only list episodes up to today. Audio is built days in advance so a missed
+    # run can be filled instantly, but Spotify ignores a future pubDate and
+    # publishes whatever it finds, which would put days-ahead readings at the
+    # top of the show. Holding them out of the feed until their own date is the
+    # only reliable way to show exactly one episode per day.
+    today = datetime.datetime.now(ZoneInfo(LOCAL_TZ)).date()
     items = []
     for name in files:
         stamp = name[:-4]
         try:
             day = datetime.date.fromisoformat(stamp)
         except ValueError:
+            continue
+        if day > today:
             continue
         path = os.path.join(audio_dir(), name)
         size = os.path.getsize(path)

@@ -3,7 +3,7 @@ name: Word of the Day
 
 on:
   schedule:
-    # Three attempts from 08:47 UTC, and deliberately not on the hour.
+    # Four attempts, the first just past midnight US Central, none on the hour.
     #
     # Two things had to be worked around here. First, "0 11 * * *" never fired
     # at all: GitHub documents that scheduled runs are delayed or dropped under
@@ -12,12 +12,19 @@ on:
     # 100 minutes late two days running, which pushed the reading past the 7am
     # task and made it look like nothing had happened.
     #
-    # So the first attempt is set early enough that even a two hour delay still
-    # lands well before 7am US Central. The later two are backups in case one is
-    # dropped. The script exits immediately when the day's episode already
-    # exists, so the extra attempts cost seconds and never duplicate anything.
+    # The first slot is 05:23 UTC, just past midnight US Central. Its job is to
+    # put the new day's episode into the feed as early as possible, because
+    # Spotify only sees an episode once it appears there and then polls on its
+    # own schedule. Starting at midnight gives Spotify roughly seven hours to
+    # notice it before the 7am task.
+    #
+    # That run is quick: the audio was already built a day or two earlier, so
+    # there is usually nothing to synthesize and it only rebuilds the feed.
+    # The later slots are backups in case a run is dropped, and they cost
+    # seconds when there is nothing to do.
+    - cron: "23 5 * * *"
+    - cron: "47 6 * * *"
     - cron: "47 8 * * *"
-    - cron: "47 9 * * *"
     - cron: "47 10 * * *"
   # Lets you run it by hand from the Actions tab. Tick the box to only inspect
   # the RSS feed (no task is created) instead of doing the full run.
