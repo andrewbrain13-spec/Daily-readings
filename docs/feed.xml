@@ -21,6 +21,16 @@
     <itunes:explicit>no</itunes:explicit>
     <itunes:type>episodic</itunes:type>
     <item>
+      <title>Daily Readings - 15 August 2026</title>
+      <description>The reading, the Gospel, and the words of the Popes for 15 August 2026.</description>
+      <link>https://www.vaticannews.va/en/word-of-the-day/2026/08/15.html</link>
+      <guid isPermaLink="false">2026-08-15</guid>
+      <pubDate>Sat, 15 Aug 2026 07:00:00 +0000</pubDate>
+      <enclosure url="https://andrewbrain13-spec.github.io/Daily-readings/audio/2026-08-15.mp3" length="1739664" type="audio/mpeg" />
+      <itunes:duration>289</itunes:duration>
+      <itunes:explicit>no</itunes:explicit>
+    </item>
+    <item>
       <title>Daily Readings - 14 August 2026</title>
       <description>The reading, the Gospel, and the words of the Popes for 14 August 2026.</description>
       <link>https://www.vaticannews.va/en/word-of-the-day/2026/08/14.html</link>
