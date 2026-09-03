@@ -21,6 +21,16 @@
     <itunes:explicit>no</itunes:explicit>
     <itunes:type>episodic</itunes:type>
     <item>
+      <title>Daily Readings - 03 September 2026</title>
+      <description>The reading, the Gospel, and the words of the Popes for 03 September 2026.</description>
+      <link>https://www.vaticannews.va/en/word-of-the-day/2026/09/03.html</link>
+      <guid isPermaLink="false">2026-09-03</guid>
+      <pubDate>Thu, 03 Sep 2026 07:00:00 +0000</pubDate>
+      <enclosure url="https://andrewbrain13-spec.github.io/Daily-readings/audio/2026-09-03.mp3" length="1317744" type="audio/mpeg" />
+      <itunes:duration>219</itunes:duration>
+      <itunes:explicit>no</itunes:explicit>
+    </item>
+    <item>
       <title>Daily Readings - 02 September 2026</title>
       <description>The reading, the Gospel, and the words of the Popes for 02 September 2026.</description>
       <link>https://www.vaticannews.va/en/word-of-the-day/2026/09/02.html</link>
