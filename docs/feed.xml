@@ -21,6 +21,16 @@
     <itunes:explicit>no</itunes:explicit>
     <itunes:type>episodic</itunes:type>
     <item>
+      <title>Daily Readings - 02 October 2026</title>
+      <description>The reading, the Gospel, and the words of the Popes for 02 October 2026.</description>
+      <link>https://www.vaticannews.va/en/word-of-the-day/2026/10/02.html</link>
+      <guid isPermaLink="false">2026-10-02</guid>
+      <pubDate>Fri, 02 Oct 2026 07:00:00 +0000</pubDate>
+      <enclosure url="https://andrewbrain13-spec.github.io/Daily-readings/audio/2026-10-02.mp3" length="1191024" type="audio/mpeg" />
+      <itunes:duration>198</itunes:duration>
+      <itunes:explicit>no</itunes:explicit>
+    </item>
+    <item>
       <title>Daily Readings - 01 October 2026</title>
       <description>The reading, the Gospel, and the words of the Popes for 01 October 2026.</description>
       <link>https://www.vaticannews.va/en/word-of-the-day/2026/10/01.html</link>
@@ -588,16 +598,6 @@
       <pubDate>Thu, 06 Aug 2026 07:00:00 +0000</pubDate>
       <enclosure url="https://andrewbrain13-spec.github.io/Daily-readings/audio/2026-08-06.mp3" length="1492416" type="audio/mpeg" />
       <itunes:duration>248</itunes:duration>
-      <itunes:explicit>no</itunes:explicit>
-    </item>
-    <item>
-      <title>Daily Readings - 05 August 2026</title>
-      <description>The reading, the Gospel, and the words of the Popes for 05 August 2026.</description>
-      <link>https://www.vaticannews.va/en/word-of-the-day/2026/08/05.html</link>
-      <guid isPermaLink="false">2026-08-05</guid>
-      <pubDate>Wed, 05 Aug 2026 07:00:00 +0000</pubDate>
-      <enclosure url="https://andrewbrain13-spec.github.io/Daily-readings/audio/2026-08-05.mp3" length="1160208" type="audio/mpeg" />
-      <itunes:duration>193</itunes:duration>
       <itunes:explicit>no</itunes:explicit>
     </item>
   </channel>
