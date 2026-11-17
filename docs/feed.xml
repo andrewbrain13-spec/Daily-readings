@@ -21,6 +21,16 @@
     <itunes:explicit>no</itunes:explicit>
     <itunes:type>episodic</itunes:type>
     <item>
+      <title>Daily Readings - 17 November 2026</title>
+      <description>The reading, the Gospel, and the words of the Popes for 17 November 2026.</description>
+      <link>https://www.vaticannews.va/en/word-of-the-day/2026/11/17.html</link>
+      <guid isPermaLink="false">2026-11-17</guid>
+      <pubDate>Tue, 17 Nov 2026 07:00:00 +0000</pubDate>
+      <enclosure url="https://andrewbrain13-spec.github.io/Daily-readings/audio/2026-11-17.mp3" length="1597968" type="audio/mpeg" />
+      <itunes:duration>266</itunes:duration>
+      <itunes:explicit>no</itunes:explicit>
+    </item>
+    <item>
       <title>Daily Readings - 16 November 2026</title>
       <description>The reading, the Gospel, and the words of the Popes for 16 November 2026.</description>
       <link>https://www.vaticannews.va/en/word-of-the-day/2026/11/16.html</link>
@@ -588,26 +598,6 @@
       <pubDate>Mon, 21 Sep 2026 07:00:00 +0000</pubDate>
       <enclosure url="https://andrewbrain13-spec.github.io/Daily-readings/audio/2026-09-21.mp3" length="1120176" type="audio/mpeg" />
       <itunes:duration>186</itunes:duration>
-      <itunes:explicit>no</itunes:explicit>
-    </item>
-    <item>
-      <title>Daily Readings - 20 September 2026</title>
-      <description>The reading, the Gospel, and the words of the Popes for 20 September 2026.</description>
-      <link>https://www.vaticannews.va/en/word-of-the-day/2026/09/20.html</link>
-      <guid isPermaLink="false">2026-09-20</guid>
-      <pubDate>Sun, 20 Sep 2026 07:00:00 +0000</pubDate>
-      <enclosure url="https://andrewbrain13-spec.github.io/Daily-readings/audio/2026-09-20.mp3" length="1452096" type="audio/mpeg" />
-      <itunes:duration>242</itunes:duration>
-      <itunes:explicit>no</itunes:explicit>
-    </item>
-    <item>
-      <title>Daily Readings - 19 September 2026</title>
-      <description>The reading, the Gospel, and the words of the Popes for 19 September 2026.</description>
-      <link>https://www.vaticannews.va/en/word-of-the-day/2026/09/19.html</link>
-      <guid isPermaLink="false">2026-09-19</guid>
-      <pubDate>Sat, 19 Sep 2026 07:00:00 +0000</pubDate>
-      <enclosure url="https://andrewbrain13-spec.github.io/Daily-readings/audio/2026-09-19.mp3" length="1633680" type="audio/mpeg" />
-      <itunes:duration>272</itunes:duration>
       <itunes:explicit>no</itunes:explicit>
     </item>
   </channel>
