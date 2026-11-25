@@ -579,12 +579,20 @@ def rebuild_feed():
     files = sorted(
         (f for f in os.listdir(audio_dir()) if f.endswith(".mp3")), reverse=True
     )
-    # Only list episodes up to today. Audio is built days in advance so a missed
-    # run can be filled instantly, but Spotify ignores a future pubDate and
-    # publishes whatever it finds, which would put days-ahead readings at the
-    # top of the show. Holding them out of the feed until their own date is the
-    # only reliable way to show exactly one episode per day.
-    today = datetime.datetime.now(ZoneInfo(LOCAL_TZ)).date()
+    # List episodes up to tomorrow, not just today.
+    #
+    # Getting a reading into Spotify by 6am means clearing three delays that
+    # are all outside our control and all got worse: GitHub ran a 05:23 cron at
+    # 15:48, GitHub Pages took over two hours to serve the rebuilt feed, and
+    # Spotify then polls on its own schedule. Waiting until the morning of to
+    # list an episode puts every one of those on the critical path.
+    #
+    # Listing a day ahead removes them all. By 6am the episode has been in the
+    # feed since the previous day's run, so Spotify has had roughly 24 hours to
+    # notice it no matter how late anything ran. The cost is that tomorrow's
+    # episode sits above today's in the show; one day is the smallest lead that
+    # buys the full night of slack.
+    today = datetime.datetime.now(ZoneInfo(LOCAL_TZ)).date() + datetime.timedelta(days=1)
     items = []
     for name in files:
         stamp = name[:-4]
